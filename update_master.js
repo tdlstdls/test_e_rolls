@@ -1,6 +1,8 @@
 /**
  * @file update_master.js
  * @description シリーズ別最大IDの抽出、ソース別参照、および出力フォーマットの最適化（一行化）を行う。
+ * キャラ設定: 超激レア=3, 伝説レア=4
+ * アイテム設定: 名称を略称に変換し、GatyaDataSetE3.csv由来の全アイテムを網羅する。
  */
 
 const fs = require('fs');
@@ -18,6 +20,27 @@ const FILES = {
 };
 
 const ignoreKeywords = ["にゃんこガチャ", "福引", "レアガチャ", "プラチナガチャ", "レジェンドガチャ"];
+
+/**
+ * アイテムIDごとの略称定義
+ */
+const itemNameAbbreviations = {
+    0: "スピダ",
+    1: "トレレ",
+    2: "ネコボン",
+    3: "ニャンピュ",
+    4: "おかめ",
+    5: "スニャ",
+    10: "5千XP",
+    11: "1万XP",
+    12: "3万XP",
+    14: "10万XP",
+    18: "200万XP",
+    159: "5千XP",
+    197: "100万XP",
+    222: "2千XP",
+    223: "25000XP"
+};
 
 function parseJsData(rawString, startChar, endChar) {
     const start = rawString.indexOf(startChar);
@@ -73,23 +96,30 @@ function generateMaster() {
         const catsMap = {};
         catsData.forEach(c => { catsMap[c.id] = { name: c.name, rarity: c.rarity }; });
 
+        // Gatyaitembuy.csv のパース：行インデックス(i-1)をIDとしてマッピング
         const itemBuyMap = {};
         const itemLines = itemBuyContent.split(/\r?\n/).filter(l => l && !l.startsWith('[source'));
-        const itemHeaders = itemLines[0].split(',');
-        const itemIdIdx = itemHeaders.indexOf('stageDropItemID');
-        const itemRarityIdx = itemHeaders.indexOf('Rarity');
-        const itemCommentIdx = itemHeaders.indexOf('comment');
-
-        itemLines.slice(1).forEach(line => {
-            const cols = line.split(',');
-            const id = parseInt(cols[itemIdIdx]);
-            if (!isNaN(id) && id !== -1) {
-                itemBuyMap[id] = {
-                    name: cols[itemCommentIdx] ? cols[itemCommentIdx].replace(/ガチャ排出用：|アイテムショップ：/g, "") : "Unknown",
-                    rarity: parseInt(cols[itemRarityIdx]) || 0
-                };
+        for (let i = 1; i < itemLines.length; i++) {
+            const cols = itemLines[i].split(',');
+            if (cols.length < 2) continue;
+            
+            const id = i - 1; 
+            const rarity = parseInt(cols[0]); 
+            let name = cols[cols.length - 1] || "Unknown"; 
+            
+            // 名称の正規化
+            name = name.replace(/ガチャ排出用：|アイテムショップ：/g, "").trim();
+            
+            // 略称定義があれば適用
+            if (itemNameAbbreviations[id] !== undefined) {
+                name = itemNameAbbreviations[id];
             }
-        });
+            
+            itemBuyMap[id] = {
+                name: name,
+                rarity: isNaN(rarity) ? 0 : rarity
+            };
+        }
 
         const ticketOverrideLookup = {};
         gatyaTsvContent.split(/\r?\n/).forEach(line => {
@@ -122,6 +152,11 @@ function generateMaster() {
         const usedE1Ids = new Set();
         const usedE3Ids = new Set();
 
+        // アイテムプール(E3)から全IDを収集
+        poolE3.forEach(set => {
+            set.forEach(id => usedE3Ids.add(id));
+        });
+
         Object.keys(gachaSeriesMaster).forEach(sid => {
             const series = gachaSeriesMaster[sid];
             if (sid === "0" || !series.gachaIds || series.gachaIds.length === 0) return;
@@ -136,7 +171,6 @@ function generateMaster() {
             const idsE1 = poolE1[targetGid] || [];
             const idsE3 = poolE3[targetGid] || [];
             idsE1.forEach(id => usedE1Ids.add(id));
-            idsE3.forEach(id => usedE3Ids.add(id));
 
             gachaMaster[targetGid] = {
                 name: series.name,
@@ -150,17 +184,29 @@ function generateMaster() {
             };
         });
 
-        usedE1Ids.forEach(id => { if (catsMap[id]) finalItemMaster[id] = catsMap[id]; });
-        usedE3Ids.forEach(id => { if (itemBuyMap[id]) finalItemMaster[id] = itemBuyMap[id]; });
+        // 1. キャラクターデータの反映（超激レア=3, 伝説レア=4）
+        usedE1Ids.forEach(id => {
+            if (catsMap[id]) {
+                let assignedRarity = 3;
+                if (id === 557 || id === 474) assignedRarity = 4;
+                finalItemMaster[id] = { name: catsMap[id].name, rarity: assignedRarity };
+            }
+        });
 
-        // 最適化された文字列化を適用
+        // 2. アイテムデータの反映（略称対応済み）
+        usedE3Ids.forEach(id => {
+            if (itemBuyMap[id]) {
+                finalItemMaster[id] = itemBuyMap[id];
+            }
+        });
+
         const gachaMasterStr = customStringify(gachaMaster);
         const itemMasterStr = customStringify(finalItemMaster);
 
         const output = `/**\n * 生成日時: ${new Date().toLocaleString()}\n */\n\nconst gachaMaster = ${gachaMasterStr};\n\nconst itemMaster = ${itemMasterStr};\n\nif (typeof module !== 'undefined') { module.exports = { gachaMaster, itemMaster }; }`;
         
         fs.writeFileSync('master.js', output);
-        console.log(`成功: master.js を一行化フォーマットで更新しました。`);
+        console.log(`成功: master.js を更新しました（アイテム名の略称変換を適用）。`);
 
     } catch (err) {
         console.error("生成失敗:", err.message);
