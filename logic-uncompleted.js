@@ -64,10 +64,11 @@ function calculateUncompletedData(initialSeed, gacha, tableRows, thresholds, ini
             node.itemId = -1; node.itemName = '---';
         }
         
+        // --- 修正箇所：変数名を reRollPool に統一 ---
         if (node.rarityId === 1 && pool.length > 1) {
             const reRollPool = pool.filter(id => id !== node.itemId);
             if (reRollPool.length > 0) {
-                node.reRollSlot = s4 % rePool.length;
+                node.reRollSlot = s4 % reRollPool.length; // rePool を reRollPool に変更
                 node.reRollItemId = reRollPool[node.reRollSlot];
                 node.reRollItemName = getItemNameSafe(node.reRollItemId);
             } else { node.reRollItemId = -1; node.reRollItemName = '---'; }
@@ -136,7 +137,7 @@ function calculateUncompletedData(initialSeed, gacha, tableRows, thresholds, ini
             // 確定ロール: 目玉(確定)扱い。通常枠シード消費なし
             node.singleRoll = `${roll}g`;
             node.isGuaranteedRoll = true;
-            node.singleUseSeeds = 0; // 確定枠自体はシードを消費しない(位置固定のため)
+            node.singleUseSeeds = 0; 
             node.singleNextAddr = node.address;
             sLastActualItemId = -2;
         } else if (node.isFeatured) {
@@ -176,8 +177,8 @@ function calculateUncompletedData(initialSeed, gacha, tableRows, thresholds, ini
         }
 
         singleRoutePath.set(sIdx, roll);
-        sIdx = sIdx + (node.singleUseSeeds || 0); // 確定時は0、通常時は3 or 4
-        if (isGuaranteedRoll) sIdx += 0; // 遷移なし
+        sIdx = sIdx + (node.singleUseSeeds || 0); 
+        if (isGuaranteedRoll) sIdx += 0; 
         else if (node.singleUseSeeds === null) sIdx += 3;
     }
 
