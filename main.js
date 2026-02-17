@@ -1,5 +1,6 @@
 /**
  * 担当: アプリケーションの起動、URLパラメータ管理、DOMイベントリスナーの制御
+ * 改修内容: master.js への依存を廃止し、DataLoader による動的ロードに対応。
  */
 
 // --- グローバル変数 ---
@@ -209,11 +210,18 @@ function toggleSeedInput() {
 }
 
 // イベントリスナーの設定
-document.addEventListener('DOMContentLoaded', () => {
-    // ユーティリティによる初期化
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. データの動的ロードを待機
+    const loadSuccess = await DataLoader.init();
+    if (!loadSuccess) {
+        alert("データのロードに失敗しました。サーバーまたはファイルの状態を確認してください。");
+        return;
+    }
+
+    // 2. ユーティリティによる初期化（スロット順などの構成）
     setupGachaRarityItems();
 
-    // 各UI要素のイベント紐付け
+    // 3. 各UI要素のイベント紐付け
     document.getElementById('executeButton').addEventListener('click', () => {
         runSimulationAndDisplay({ hideSeedInput: true, uiOverrides: { seed: document.getElementById('seedInput').value } });
     });
@@ -256,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('result-table-container').addEventListener('click', (event) => {
         if (event.target.id === 'forceRerollToggle') {
             window.forceRerollMode = !window.forceRerollMode;
-            // 状態を反転させてからシミュレーションを再実行
             runSimulationAndDisplay();
         }
     });
@@ -285,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyHighlightMode();
         }
     });
-    // 初回実行
+
+    // 4. 全データの準備が整ったので、初回シミュレーションを実行
     runSimulationAndDisplay();
 });
