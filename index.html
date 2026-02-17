@@ -16,18 +16,36 @@
             <div class="row">
                 <div class="control-group-left">
                     <div class="input-item">
-                         <a id="showSeedInputLink" href="#">SEED入力</a>
+                        <div class="gacha-selector-container">
+                            <span id="gachaNameDisplay">読込中...</span>
+                            <select id="gachaSelect"></select>
+                        </div>
+                    </div>
+                    <div class="input-item">
+                        <a id="copySeedDisplayLink" href="#" title="Click to copy SEED"></a>
+                    </div>
+                    <div class="input-item" style="position: relative;">
+                        <a id="showSeedInputLink" href="#">SEED値更新</a>
+                        <input type="number" id="seedInput" style="display:none; width: 100px;">
+                        <div id="seedTooltip" class="seed-tooltip" style="display:none;">ここにSEED値を入力してください</div>
                     </div>
                     <div class="input-item" id="guaranteedControl">
-                        <label for="guaranteedRollsInput">next guaranteed</label>
-                        <select id="guaranteedRollsInput"></select>
+                        <div class="guaranteed-selector-container">
+                            <span id="guaranteedDisplay">次の確定：-</span>
+                            <select id="guaranteedRollsInput"></select>
+                        </div>
+                    </div>
+                    <div class="input-item" id="lastRollControl">
+                        <div class="lastroll-selector-container">
+                            <span id="lastRollDisplay">LastRoll: -</span>
+                            <select id="lastRollInput"></select>
+                        </div>
                     </div>
                     <div class="input-item" id="legendDisplay" style="font-size: 0.7rem;">
                         <span id="legendSingle" class="legend-box legend-single">単発ルート</span>
                         <span id="legendMulti" class="legend-box legend-multi">10連ルート</span>
                         <span id="legendCommon" class="legend-box legend-common">共通ルート</span>
                     </div>
-                    <div id="lastRollDisplay" class="input-item-display-only"></div>
                 </div>
                 <div class="control-group-right">
                     <div class="input-item">
@@ -37,17 +55,6 @@
                     <div class="input-item" id="stockControl">
                         <label for="featuredStockInput">目玉残数</label>
                         <select id="featuredStockInput"></select>
-                    </div>
-                    <a id="copySeedLink" href="#">Copy SEED</a>
-                </div>
-            </div>
-
-            <div class="row hidden-control" id="seedRow">
-                <div class="input-item-seed">
-                    <label for="seedInput">SEED</label>
-                    <div class="seed-input-group">
-                        <input type="number" id="seedInput" value="12345">
-                        <button id="executeButton">更新</button>
                     </div>
                 </div>
             </div>
